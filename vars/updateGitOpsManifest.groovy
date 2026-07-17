@@ -8,15 +8,18 @@ def call(Map args = [:]) {
     withCredentials([usernamePassword(credentialsId: credsId, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
         sh """
             rm -rf gitops-config
-            # FIX: Escaped the variables so Jenkins doesn't leak the token in logs/state
+            # Escaped the variables so Jenkins doesn't leak the token in logs/state
             git clone https://\${GIT_USER}:\${GIT_TOKEN}@${configRepo.replaceFirst('https://', '')} gitops-config
             cd gitops-config
             
             git config user.name "jenkins-bot"
             git config user.email "jenkins-bot@your-org.com"
 
-            # FIX: Updated path because we moved values-<env>.yaml inside the helm/ directory
+            # 1. Update the environment-specific file dynamically
             yq -i '.image.tag = "${imageTag}"' apps/${appName}/helm/values-${environment}.yaml
+            
+            # 2. Update the base values.yaml file so ArgoCD immediately catches it
+            yq -i '.image.tag = "${imageTag}"' apps/${appName}/helm/values.yaml
         """
 
         if (environment == 'prod') {
@@ -24,10 +27,11 @@ def call(Map args = [:]) {
             sh """
                 cd gitops-config
                 git checkout -b ${branch}
+                # The -am flag will automatically commit BOTH modified yaml files
                 git commit -am "deploy(${appName}): bump prod image tag to ${imageTag}"
                 git push origin ${branch}
                 
-                # FIX: Escaped the token here too
+                # Escaped the token here too
                 GH_TOKEN=\${GIT_TOKEN} gh pr create \
                   --title "deploy(${appName}): ${imageTag} to prod" \
                   --body "Automated tag bump from Jenkins build. Requires @release-approvers review." \
@@ -37,10 +41,11 @@ def call(Map args = [:]) {
         } else {
             sh """
                 cd gitops-config
+                # The -am flag will automatically commit BOTH modified yaml files
                 git commit -am "deploy(${appName}): bump ${environment} image tag to ${imageTag}"
                 git push origin main
             """
-            echo "Committed ${appName}:${imageTag} to ${environment}. Argo CD will deploy."
+            echo "Committed ${appName}:${imageTag} to ${environment} and base values. Argo CD will deploy."
         }
     }
 }
