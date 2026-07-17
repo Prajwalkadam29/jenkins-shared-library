@@ -10,6 +10,7 @@ def call(Map args = [:]) {
             file(credentialsId: 'cosign-private-key', variable: 'COSIGN_KEY'),
             string(credentialsId: 'cosign-password', variable: 'COSIGN_PASSWORD')
     ]) {
-        sh "cosign sign --key \${COSIGN_KEY} ${imageRef}"
+        // FIX: Added --yes to prevent interactive "Are you sure?" prompts
+        sh "cosign sign --yes --key \${COSIGN_KEY} ${imageRef}"
     }
 }

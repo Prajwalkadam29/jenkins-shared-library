@@ -1,4 +1,3 @@
-// vars/generateSBOM.groovy
 def call(Map args = [:]) {
     def imageRef = args.imageRef
     def format = args.format ?: 'cyclonedx'
@@ -12,5 +11,12 @@ def call(Map args = [:]) {
 
     // 2. Attest (attach) the SBOM to the image in ECR using Cosign
     echo "Attesting SBOM to the container registry..."
-    sh "cosign attest --yes --predicate ${outputDir}/sbom-${format}.json --type ${format} ${imageRef}"
+
+    // FIX: Added the credentials block and the --key argument so Cosign knows how to authenticate
+    withCredentials([
+            file(credentialsId: 'cosign-private-key', variable: 'COSIGN_KEY'),
+            string(credentialsId: 'cosign-password', variable: 'COSIGN_PASSWORD')
+    ]) {
+        sh "cosign attest --yes --key \${COSIGN_KEY} --predicate ${outputDir}/sbom-${format}.json --type ${format} ${imageRef}"
+    }
 }
