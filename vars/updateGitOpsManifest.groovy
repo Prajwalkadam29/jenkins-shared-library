@@ -2,7 +2,7 @@ def call(Map args = [:]) {
     def appName     = args.appName
     def environment = args.environment
     def imageTag    = args.imageTag
-    def configRepo  = args.configRepoUrl ?: 'https://github.com/your-org/gitops-config.git'
+    def configRepo  = args.configRepoUrl ?: 'https://github.com/Prajwalkadam29/gitops-config-cc-app.git'
     def credsId     = args.credentialsId ?: 'gitops-config-write-token'
 
     withCredentials([usernamePassword(credentialsId: credsId, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
